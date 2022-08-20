@@ -27,16 +27,17 @@ GRIDHEIGHT = int(HEIGHT / TILESIZE)
 PLAYER_X = WIDTH / 2
 PLAYER_Y = HEIGHT / 2
 
-# full mape size (for generation)
-MAP_WIDTH = 80
-MAP_HEIGHT = 60
+# full map size (for generation)
+MAP_WIDTH = 100
+MAP_HEIGHT = 100
+
+# size of the tunnels
+TUNNEL_WIDTH = 3
 
 # Meta Data
-FPS = 60
-TITLE = "Wizrad"
+FPS = 30
+TITLE = "SLNK"
 BGCOLOR = BLACK
-# the interval of time in which things happen
-TIME_INTERVAL = 0.5
 
 # Log
 VIS_LOG_LINES = 3
@@ -53,19 +54,9 @@ S_Y = 0
 
 ###### Player ######
 
-# starting stats
-PLAYER_START_STR = 3
-PLAYER_START_CON = 10
-PLAYER_START_INT = 3
-
-# stat increase rates (gain RATE% of a point per level)
-PLAYER_STR_RATE = 0.5
-PLAYER_CON_RATE = 1.5
-PLAYER_INT_RATE = 0.5
-
 # META
 GODMODE = False
-
+TICK = 0.05  # time in between game ticks
 
 @dataclass
 class SPRITEPOOL:
@@ -75,6 +66,7 @@ class SPRITEPOOL:
 
 OFFSCREEN = SPRITEPOOL(walls=[], enemies=[])
 ONSCREEN = SPRITEPOOL(walls=[], enemies=[])
+OFFSCREEN_DIST = WIDTH + 10 * TILESIZE
 
 # Movement
 SPRINT_DELAY = 1
@@ -113,13 +105,10 @@ FDAMAGE_RANGE = [0, 5]
 SPAWNED = "sp"
 DEAD = "x"
 
-# Skeletons
-SKELETON = "sk"
-SKMIN = 20
-SKMAX = 30
-SKLIFE = 5
-SKDAMAGE_RANGE = [2, 4]
-SK_XP = 8
+# Apples
+APPLE = "a"
+AMIN = 5
+AMAX = 10
 
 # Wall
 WALL = 1

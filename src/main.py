@@ -25,6 +25,7 @@ class Game:
 
         self.screen = pg.display.set_mode((WIDTH, HEIGHT), flags=DOUBLEBUF)
         self.screen.set_alpha(None)
+        pg.event.set_allowed([QUIT, KEYDOWN, KEYUP])
 
         pg.display.set_caption(TITLE)
         self.clock = pg.time.Clock()
@@ -37,6 +38,10 @@ class Game:
         self.tick = False
         self.show_inventory = False
         self.godmode = GODMODE
+        self.playing = False
+
+        self.cur_time = time.time()
+        self.last_time = self.cur_time
 
         pg.event.set_allowed([QUIT, KEYDOWN, KEYUP])
 
@@ -64,10 +69,12 @@ class Game:
 
         # put the player in a random place
         gx, gy = self.current_floor.get_valid_pos()
-        self.player.update_global_position(gx, gy)
+        self.player.gx = gx
+        self.player.gy = gy
 
         # start the engines
         self.tick = True
+        self.playing = True
 
         # TODO remove
         self.save_map()
@@ -113,28 +120,26 @@ class Game:
     def update(self):
         # only update on tick
         # (currently just player movement)
-        if not self.player.still:
+        self.cur_time = time.time()
+        if self.cur_time - self.last_time > TICK:
+            self.last_time = self.cur_time
             self.tick = True
 
-        if self.show_inventory:
-            self.inventory.update()
-        elif self.tick:  # NOTE: might be able to toggle turn based here... 
+        if self.tick:  # NOTE: might be able to toggle turn based here...
             # use the global position of the player to decide what to draw
             cur_g_x = self.player.gx
             cur_g_y = self.player.gy
 
             self.playerg.update()
-            self.walls.update()
-            self.enemies.update()
-            self.current_floor.update_viewport(cur_g_x, cur_g_y)
-            self.player.still = True
+            for w in ONSCREEN.walls:
+                w.update()
+            for e in ONSCREEN.enemies:
+                e.update()
+            self.current_floor.update_viewport(self.player.gx, self.player.gy)
             self.tick = False
-            self.player.dx = 0
-            self.player.dy = 0
 
-        if not self.player.state.alive:
+        if not self.player.alive:
             self.playing = False
-        
 
     def draw_grid(self):
         for x in range(0, WIDTH, TILESIZE):
@@ -172,45 +177,16 @@ class Game:
                 if event.type == pg.KEYDOWN:
                     if event.key == pg.K_ESCAPE:
                         self.quit()
-                    if event.key == pg.K_m:
-                        self.quit(save_map=True)
                     if event.key == pg.K_a:
-                        self.player.move(dx=-1)
+                        self.player.move(dx=-1, dy=0)
                     if event.key == pg.K_d:
-                        self.player.move(dx=1)
+                        self.player.move(dx=1, dy=0)
                     if event.key == pg.K_w:
-                        self.player.move(dy=-1)
+                        self.player.move(dx=0, dy=-1)
                     if event.key == pg.K_s:
-                        self.player.move(dy=1)
-                    if event.key == pg.K_SPACE:
-                        # if not self.player.is_firing: TODO maybe limit this?
-                        self.tick = True
-                        mouse_pos = pg.mouse.get_pos()
-                        self.player.fire_spell(mouse_pos)
+                        self.player.move(dx=0, dy=1)
                     if event.key == pg.K_RETURN:
                         self.tick = True
-                    if event.key == pg.K_RSHIFT or event.key == pg.K_LSHIFT:
-                        self.player.use_item()
-                    if event.key == pg.K_g:
-                        self.show_grid = not self.show_grid
-                    if event.key == pg.K_l:
-                        self.godmode = not self.godmode
-                        self.log.info(f"GODMODE ON: {self.godmode}")
-                    if event.key == pg.K_i:
-                        self.show_inventory = True
-                    if event.key == pg.K_o:
-                        print(f"group num walls = {len(self.walls)}")
-                    if event.key == pg.K_DOWN:
-                        self.log.update_place(change=1)
-                    if event.key == pg.K_UP:
-                        self.log.update_place(change=-1)
-                elif event.type == pg.MOUSEBUTTONUP and event.button == 1:
-                    mouse_pos = pg.mouse.get_pos()
-                    self.player.inspect_space(mouse_pos)
-                    self.tick = True
-                elif event.type == pg.MOUSEBUTTONUP and event.button == 3:
-                    mouse_pos = pg.mouse.get_pos()
-                    self.player.interact_space(mouse_pos)
 
     def get_sprite_at(self, x, y):
         for sprite in self.all_sprites:

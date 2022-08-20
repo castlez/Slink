@@ -78,6 +78,12 @@ class WSPRITE(pg.sprite.Sprite):
         """
         # Find direction vector (dx, dy) between enemy and player.
         dx, dy = self.game.player.x - self.x, self.game.player.y - self.y
+
+        # flip it to make the apples run away
+        dx *= -1
+        dy *= -1
+
+        # math shit
         dist = math.hypot(dx, dy)
         if dist == 0:
             # dont need to move if already munching on player
@@ -191,13 +197,13 @@ class Chest(WSPRITE):
 
 
 # Enemies
-class Skeleton(WSPRITE):
+class Apple(WSPRITE):
     def __init__(self, game, x, y, gx, gy):
-        super().__init__(game, x, y, gx, gy, game.enemies, color=WHITE)
+        super().__init__(game, x, y, gx, gy, game.enemies, color=RED)
         self.start_pos = (gx, gy)
-        self.name = "Skeleton"
-        self.sign = SKELETON + SPAWNED
-        self.unspawned_sign = SKELETON
+        self.name = "Apple"
+        self.sign = APPLE + SPAWNED
+        self.unspawned_sign = APPLE
         self.set_sign(self.sign)
         self.health = 6
         self.inspect_message = f"An animated skeleton. A good fireball should do the trick."
@@ -250,7 +256,6 @@ class Skeleton(WSPRITE):
             self.rect.y = self.y * TILESIZE
 
     def draw(self, screen):
-        print("drawing skele")
         if self.visible:
             screen.blit(self.rect, (self.rect.x, self.rect.y))
     
@@ -260,16 +265,8 @@ class Skeleton(WSPRITE):
         if self.health <= 0 and self.alive:
             self.game.log.info("...and it killed it!")
             self.game.player.gain_xp(SK_XP)
-            self.set_sign(SKELETON + DEAD)
+            self.set_sign(APPLE + DEAD)
             self.alive = False
-    
-    def hit(self, target):
-        # can only hurt the player
-        if target.name == "Player":
-            self.skip = True
-            dmg = random.randint(SKDAMAGE_RANGE[0], SKDAMAGE_RANGE[1])
-            target.take_damage(self, dmg)
-
     
     def interact(self, player):
         return "I only know to kill things with magic..."

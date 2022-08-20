@@ -1,6 +1,5 @@
 import pygame as pg
 from settings import *
-from player import PlayerState
 import os
 
 class WSCREEN(pg.sprite.Sprite):

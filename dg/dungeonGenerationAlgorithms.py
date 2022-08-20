@@ -26,9 +26,11 @@ from math import sqrt
 from collections import OrderedDict
 from src.settings import *
 
-# SCREEN_WIDTH = 64
-# SCREEN_HEIGHT = 48
-# TEXTBOX_HEIGHT = 10
+SCREEN_WIDTH = 64
+SCREEN_HEIGHT = 48
+TEXTBOX_HEIGHT = 10
+
+
 
 # MAP_WIDTH = SCREEN_WIDTH
 # MAP_HEIGHT = SCREEN_HEIGHT - TEXTBOX_HEIGHT
@@ -1120,7 +1122,19 @@ class RoomAddition:
 		for i in range(self.maxTunnelLength):
 			x = startX - direction[0]*i
 			y = startY - direction[1]*i
-			self.level[x][y] = 0
+
+			# make the tunnel TUNNEL_WIDTH wide
+
+			for i in range(TUNNEL_WIDTH):
+				if direction[0] > 0:
+					self.level[x][y+i] = 0
+				elif direction[0] < 0:
+					self.level[x][y-i] = 0
+				if direction[1] > 0:
+					self.level[x+i][y] = 0
+				elif direction[1] < 0:
+					self.level[x-i][y] = 0
+
 			# If you want doors, this is where the code should go
 			if ((x+direction[0]) == wallTile[0] and 
 				(y+direction[1]) == wallTile[1]):

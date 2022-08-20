@@ -57,8 +57,8 @@ class Floor:
     
     def get_valid_pos(self):
         while True:
-            gx = random.randint(1, MAP_WIDTH-1)
-            gy = random.randint(1, MAP_HEIGHT-1)
+            gx = random.randint(2, MAP_WIDTH-1)
+            gy = random.randint(2, MAP_HEIGHT-1)
             if self.layout[gx][gy] == 0:
                 return gx, gy
 
@@ -83,21 +83,22 @@ class Floor:
 
         removed_walls = []
         for wall in ONSCREEN.walls:
-            if wall.gx < gxmin or wall.gx > gxmax or wall.gy < gymin or wall.gy > gymax:
+            if gxmin > wall.gx > gxmax or gymin > wall.gy > gymax:
                 removed_walls.append(wall)
         for wall in removed_walls:
-                # move the wall from onscreen to offscreen
-                wall.x = WIDTH + 10
+                wall.x = OFFSCREEN_DIST
+                wall.visible = False
                 ONSCREEN.walls.remove(wall)
                 OFFSCREEN.walls.append(wall)
 
         removed_enemies = []
         for enemy in ONSCREEN.enemies:
-            if enemy.gx < gxmin or enemy.gx > gxmax or enemy.gy < gymin or enemy.gy > gymax:
+            if gxmin > enemy.gx > gxmax or gymin > enemy.gy > gymax:
                 removed_enemies.append(enemy)
         for enemy in removed_enemies:
             # move the enemy from onscreen to offscreen
-            enemy.x = WIDTH + 10
+            enemy.x = OFFSCREEN_DIST
+            enemy.visible = False
             ONSCREEN.enemies.remove(enemy)
             OFFSCREEN.enemies.append(enemy)
     
@@ -113,11 +114,12 @@ class Floor:
 
         walls_to_view = []
         for wall in OFFSCREEN.walls:
-            if gxmin < wall.gx < gxmax and gymin < wall.gy < gymax:
+            if gxmin <= wall.gx <= gxmax and gymin <= wall.gy <= gymax:
                 walls_to_view.append(wall)
         for wall in walls_to_view:
             # wall is now visible, move it into view
             wall.x, wall.y = self.get_local_pos(wall.gx, wall.gy)
+            wall.visible = True
             OFFSCREEN.walls.remove(wall)
             ONSCREEN.walls.append(wall)
 
@@ -128,15 +130,9 @@ class Floor:
         for enemy in enemies_to_view:
             # enemy is now visible, move it into view
             enemy.x, enemy.y = self.get_local_pos(enemy.gx, enemy.gy)
+            enemy.visible = True
             OFFSCREEN.enemies.remove(enemy)
             ONSCREEN.enemies.append(enemy)
-
-        # for sprite in self.all:
-        #     if gxmin < sprite.gx < gxmax and gymin < sprite.gy < gymax:
-        #         stype = "enemy" if sprite.is_enemy else "wall"  # sprite type
-        #         if OFFSCREEN[stype]:
-        #             nsprite: WSPRITE = OFFSCREEN[stype].pop()
-        #             nsprite.x, nsprite.y = self.get_local_pos()
 
     def update_viewport(self, gx, gy):
         """
@@ -146,7 +142,7 @@ class Floor:
         gx is global x position in the layout grid
         gy is global y position in the layout grid
         """
-        offset = int(GRIDHEIGHT/2)   # this is dumb and only works cuz the game is a square
+        offset = int(GRIDHEIGHT/2) + 1     # this is dumb and only works cuz the game is a square
         # need to massage the indexes so that (xmin, ymin) is (0, 0) on the view
         xmin = gx - offset
         xmax = gx + offset
@@ -158,31 +154,6 @@ class Floor:
         self.current_global_view = [[xmin, xmax], [ymin, ymax]]
         self.purge_unseen()
         self.update_seen()
-
-        # get ranges for viewport and the corresponding area
-        # in the global map
-        # fl = self.layout
-        # local_x_range = range(0, GRIDWIDTH)
-        # local_y_range = range(0, GRIDHEIGHT)
-        # global_x_range = range(xmin, xmax)
-        # global_y_range = range(ymin, ymax)
-
-        # add the new walls, inters, enemies, etc, and keep the floor clear
-        # for ly, gy in zip(local_y_range, global_y_range):
-        #     for lx, gx in zip(local_x_range, global_x_range):
-        #         if gx >= MAP_WIDTH or gy >= MAP_HEIGHT:
-        #             continue
-        #         try:
-        #             value = fl[gx][gy]
-        #         except:
-        #             return
-        #         if value == 1:
-        #             self.add_wall(Wall(self.game, lx, ly, gx, gy))
-        #         elif value == SKELETON:
-        #             sk = Skeleton(self.game, lx, ly, gx, gy)
-        #             self.add_enemy(sk)
-        #         else:
-        #             pass
 
     def populate_floor(self):
         """
@@ -196,12 +167,12 @@ class Floor:
         for gx in range(len(self.layout)):
             for gy in range(len(self.layout[gx])):
                 if self.layout[gx][gy] == 1:
-                    OFFSCREEN.walls.append(Wall(self.game, int(GRIDWIDTH/2) + 10, int(GRIDWIDTH/2), gx, gy))
+                    OFFSCREEN.walls.append(Wall(self.game, OFFSCREEN_DIST, 0, gx, gy))
 
         # skeletons
-        num_skele = random.randint(SKMIN, SKMAX)
+        num_skele = random.randint(AMIN, AMAX)
         for _ in range(num_skele):
             gx, gy = self.get_valid_pos()
-            self.layout[gx][gy] = SKELETON
-            OFFSCREEN.enemies.append(Skeleton(self.game, int(GRIDWIDTH/2) + 10, int(GRIDWIDTH/2), gx, gy))
+            self.layout[gx][gy] = APPLE
+            OFFSCREEN.enemies.append(Apple(self.game, OFFSCREEN_DIST, 0, gx, gy))
 
