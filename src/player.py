@@ -16,8 +16,11 @@ class Segment(pg.sprite.Sprite):
         self.image.fill(GREEN)
         self.rect = self.image.get_rect()
 
+        self.dx = 0
+        self.dy = 0
+
         # screen position
-        self.rect.x, self.rect.y = x * TILESIZE, y * TILESIZE
+        self.rect.x, self.rect.y = x, y
 
     def drawt(self, screen):
         screen.blit(self.image, (self.rect.x, self.rect.y))
@@ -65,28 +68,13 @@ class Player(pg.sprite.Sprite):
         screen.blit(self.image, (self.rect.x, self.rect.y))
         for seg in self.segments:
             seg.drawt(screen)
-        # prevgx = self.gx
-        # prevgy = self.gy
-        # py, px = self.game.current_floor.get_local_pos(prevgx, prevgy)
-        # for seg in self.segments:
-        #     seg.gx = prevgx
-        #     seg.gy = prevgy
-        #     seg.rect.x = px
-        #     seg.rect.y = py
-        #     seg.drawt(screen)
 
     def move(self, dx=0, dy=0):
         self.dx = dx
         self.dy = dy
 
     def update(self):
-        if self.segments:
-            # move all the segments first?
-            lastx, lasty = self.rect.x, self.rect.y
-            for seg in self.segments:
-                updatex, updatey = seg.rect.x, seg.rect.y
-                seg.rect.x, seg.rect.y = lastx, lasty
-                lastx, lasty = updatex, updatey
+        self.update_segments()
         newx = self.gx + self.dx
         newy = self.gy + self.dy
         if not self.position_is_blocked(self.dx, self.dy):
@@ -95,6 +83,19 @@ class Player(pg.sprite.Sprite):
         else:
             self.dx = 0
             self.dy = 0
+
+    def update_segments(self):
+        if self.segments:
+            last = self
+            for seg in self.segments:
+                snx = last.rect.x - last.dx * TILESIZE
+                sny = last.rect.y - last.dy * TILESIZE
+                if last.dx != 0 or last.dy != 0:  # prevents segments moving without the head? idk if i want that
+                    seg.rect.x = snx
+                    seg.rect.y = sny
+                    seg.dx = last.dx
+                    seg.dy = last.dy
+                last = seg
 
     def check_eat(self):
         # now check if we ate an apple
@@ -108,7 +109,13 @@ class Player(pg.sprite.Sprite):
     def add_segment(self):
         if not self.segments:
             # add the first segment
-            self.segments.append(Segment(self.game, self.rect.x - TILESIZE, self.rect.y))
+            # first determine where we last were
+            lastx, lasty = self.rect.x - self.dx * TILESIZE, self.rect.y - self.dy * TILESIZE
+            self.segments.append(Segment(self.game, lastx, lasty))
+        else:
+            last_seg = self.segments[-1]
+            lastx, lasty = last_seg.rect.x - last_seg.dx * TILESIZE, last_seg.rect.y - last_seg.dy * TILESIZE
+            self.segments.append(Segment(self.game, lastx, lasty))
 
     def is_moving(self):
         return self.dx != 0 or self.dy != 0
