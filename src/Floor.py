@@ -26,6 +26,7 @@ class Floor:
         self.ice = []
         self.secret = []
         self.enemies = []
+        self.eaten_enemies = []
         self.inters = []
         self.floor_number = floor_number
         self.walls = []
@@ -95,12 +96,13 @@ class Floor:
         for enemy in ONSCREEN.enemies:
             if gxmin > enemy.gx > gxmax or gymin > enemy.gy > gymax:
                 removed_enemies.append(enemy)
-        for enemy in removed_enemies:
+        for enemy in removed_enemies + self.eaten_enemies:
             # move the enemy from onscreen to offscreen
             enemy.x = OFFSCREEN_DIST
             enemy.visible = False
             ONSCREEN.enemies.remove(enemy)
             OFFSCREEN.enemies.append(enemy)
+        self.eaten_enemies = []
     
     def update_seen(self):
         """

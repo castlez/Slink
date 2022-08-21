@@ -5,6 +5,25 @@ import os
 import traceback
 from functools import reduce
 
+class Segment(pg.sprite.Sprite):
+
+    def __init__(self, game, gx, gy):
+        self.groups = game.all_sprites, game.playerg
+        # self.groups = game.all_sprites
+        pg.sprite.Sprite.__init__(self, self.groups)
+        self.image = pg.Surface((TILESIZE, TILESIZE))
+        self.image.fill(GREEN)
+        self.rect = self.image.get_rect()
+
+        # screen position
+        self.gx = gx
+        self.gy = gy
+        self.rect.x, self.rect.y = game.current_floor.get_local_pos(self.gx, self.gy)
+
+    def drawt(self, screen):
+        screen.blit(self.image, (self.rect.x, self.rect.y))
+
+
 class Player(pg.sprite.Sprite):
     def __init__(self, game, x, y):
         self.groups = game.all_sprites, game.playerg
@@ -27,7 +46,10 @@ class Player(pg.sprite.Sprite):
         # position of our head
         self.rect.x = self.x * TILESIZE
         self.rect.y = self.y * TILESIZE
-        
+
+        # segments
+        self.segments = []
+
         # position in the level
         self.gx = 0
         self.gy = 0
@@ -44,12 +66,26 @@ class Player(pg.sprite.Sprite):
 
     def drawt(self, screen):
         screen.blit(self.image, (self.rect.x, self.rect.y))
+        prevgx = self.gx
+        prevgy = self.gy
+        py, px = self.game.current_floor.get_local_pos(prevgx, prevgy)
+        for seg in self.segments:
+            seg.gx = prevgx
+            seg.gy = prevgy
+            seg.rect.x = px
+            seg.rect.y = py
+            seg.drawt(screen)
 
     def move(self, dx=0, dy=0):
         self.dx = dx
         self.dy = dy
 
     def update(self):
+        if self.segments:
+            for seg in self.segments:
+                seg.gx = self.gx
+                seg.gy = self.gy
+                seg.rect.x, seg.rect.y = self.game.current_floor.get_local_pos(seg.gx, seg.gy)
         newx = self.gx + self.dx
         newy = self.gy + self.dy
         if not self.position_is_blocked(self.dx - 1, self.dy - 1):
@@ -58,7 +94,21 @@ class Player(pg.sprite.Sprite):
         else:
             self.dx = 0
             self.dy = 0
-    
+
+    def check_eat(self):
+        # now check if we ate an apple
+        for apple in ONSCREEN.enemies:
+            if apple.gx == self.gx and apple.gy == self.gy and apple.alive:
+                # eat the apple
+                apple.die()
+                self.add_segment()
+                print("MONCH")
+                break
+
+    def add_segment(self):
+        if not self.segments:
+            # add the first segment
+            self.segments.append(Segment(self.game, self.gx + self.dx * -1, self.gy + self.dy * -1))
     def is_moving(self):
         return self.dx != 0 or self.dy != 0
     

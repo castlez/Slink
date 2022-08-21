@@ -136,6 +136,7 @@ class Game:
             for e in ONSCREEN.enemies:
                 e.update()
             self.current_floor.update_viewport(self.player.gx, self.player.gy)
+            self.player.check_eat()
             self.tick = False
 
         if not self.player.alive:

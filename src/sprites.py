@@ -30,8 +30,6 @@ class WSPRITE(pg.sprite.Sprite):
         self.start_pos = (gx, gy)
         self.rect.x = x * TILESIZE
         self.rect.y = y * TILESIZE
-        self.inspect_message = "I have no idea what that is..."
-        self.interact_message = "Not sure what I could do with that..."
 
         # for other sprites to check
         self.visible = True
@@ -73,8 +71,7 @@ class WSPRITE(pg.sprite.Sprite):
     
     def get_next_space(self):
         """
-        TODO make this actually return a space 
-        AND NOT A FUCKING DX, DY, or change the name
+        returns the next global space the apple should go to
         """
         # Find direction vector (dx, dy) between enemy and player.
         dx, dy = self.game.player.x - self.x, self.game.player.y - self.y
@@ -95,39 +92,33 @@ class WSPRITE(pg.sprite.Sprite):
         cx = round(dx)
         cy = round(dy)
 
-        # check if already diagonal to player and just
-        # need to move to hit range (adjacent NON diagonal)
-        if self.adjacent_to_player(self.x, self.y):
-            if abs(cx) == 1 and abs(cy) == 1:
-                # we are diagonal
-                t = cx + cy
-                if t == 0:
-                    return 0, cy
-                else:
-                    return cx, 0
-        return cx, cy
+        # # check if already diagonal to player and just
+        # # need to move to hit range (adjacent NON diagonal)
+        # if self.adjacent_to_player(self.x, self.y):
+        #     if abs(cx) == 1 and abs(cy) == 1:
+        #         # we are diagonal
+        #         t = cx + cy
+        #         if t == 0:
+        #             cx = 0
+        #         else:
+        #             cy = 0
+        gx = self.gx + cx
+        gy = self.gy + cy
+        return gx, gy
     
     def check_player_los(self):
-        x = self.x
-        y = self.y
-        
-        while x in range(0, GRIDWIDTH) and y in range(0, GRIDHEIGHT):
-            if self.adjacent_to_player(x, y):
-                return True
-            dx, dy = self.get_next_space()
-            x += dx
-            y += dy
-            try:
-                for sprite in self.game.all_sprites:
-                    if sprite.x == x and sprite.y == y and sprite != self:
-                        if sprite.name == "Player":
-                            return True
-                        elif sprite.name == "Wall":
-                            return False
-            except Exception as e:
-                traceback.print_exc(e)
-                continue
-        return False
+        x = self.gx
+        y = self.gy
+
+        if self.visible and ONSCREEN.enemies:
+            while x in range(0, GRIDWIDTH) and y in range(0, GRIDHEIGHT):
+                if self.adjacent_to_player(x, y):
+                    return True
+                cur = self.game.current_floor.layout[x][y]
+                if cur == WALL:  # wall
+                    break
+                x, y = self.get_next_space()
+            return False
     
     def adjacent_to_player(self, newx, newy):
         px = self.game.player.x
@@ -214,60 +205,27 @@ class Apple(WSPRITE):
         # movement
         self.skip = False  # skip a tick after hitting the player
 
+    def die(self):
+        self.game.current_floor.eaten_enemies.append(self)
+        self.alive = False
+
     def update(self):
+        """
+        If you see the snake... RUN
+        """
         if self.visible:
-            # check if we have los on the player and move if we do
-            see_player = False
-            if self.check_player_los():
-                see_player = True
-            cx, cy = self.get_next_space()
-            newx = self.x + cx 
-            newy = self.y + cy
-            # check collisions
-            blocked = False
-            hit_sprite = None
-            for sprite in self.game.all_sprites:
-                try:
-                    if sprite.x == newx and sprite.y == newy and sprite != self:
-                        self.hit(sprite)
-                        if sprite.blocking:
-                            # if it collides with a sprite and it isnt itself, block
-                            blocked = True
-                except:
-                    pass
-
-            # if we are unblocked and can see the player
-            # then we check if we are already next to the player
-            # and if not, we move
-            if not blocked and see_player and not self.skip:
-                self.gx += cx
-                self.gy += cy
-
-                x, y = self.game.current_floor.get_local_pos(self.gx, self.gy)
-                self.x = x
-                self.y = y
-                    
-            else:
-                # just adjust for viewpoint movement
-                self.x -= self.game.player.dx
-                self.y -= self.game.player.dy
-                self.skip = False
+            try:
+                x, y = self.get_local_pos()
+                if x == -1 and y == -1:
+                    return
+                self.x = x - self.game.player.dx
+                self.y = y - self.game.player.dy
+            except Exception as e:
+                print(e)
+                traceback.print_exc(e)
             self.rect.x = self.x * TILESIZE
             self.rect.y = self.y * TILESIZE
 
-    def draw(self, screen):
-        if self.visible:
-            screen.blit(self.rect, (self.rect.x, self.rect.y))
-    
-    def take_damage(self, amount):
-        self.health = self.health - amount
-        self.game.log.info(f"I hit the skeleton for {amount} damage! ({self.health} hp)")
-        if self.health <= 0 and self.alive:
-            self.game.log.info("...and it killed it!")
-            self.game.player.gain_xp(SK_XP)
-            self.set_sign(APPLE + DEAD)
-            self.alive = False
-    
-    def interact(self, player):
-        return "I only know to kill things with magic..."
-    
+    def drawt(self, screen):
+        if self.visible and self.alive:
+            screen.blit(self.image, (self.rect.x, self.rect.y))
