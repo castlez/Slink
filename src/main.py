@@ -33,7 +33,7 @@ class Game:
         self.current_floor = None
         self.view = None
         self.load_data()
-        self.show_grid = True
+        self.show_grid = False
         self.log = None
         self.tick = False
         self.show_inventory = False
@@ -75,6 +75,10 @@ class Game:
         # start the engines
         self.tick = True
         self.playing = True
+
+        # starting segments
+        self.player.add_segment()
+        self.player.add_segment()
 
         # TODO remove
         self.save_map()
@@ -188,6 +192,11 @@ class Game:
                         self.player.move(dx=0, dy=1)
                     if event.key == pg.K_RETURN:
                         self.tick = True
+                    if event.key == pg.K_l:
+                        print(f"player: {self.player.gx}, {self.player.gy}")
+                        print(f"segments:")
+                        for seg in self.player.segments:
+                            print(f"{seg.gx}, {seg.gy}")
 
     def get_sprite_at(self, x, y):
         for sprite in self.all_sprites:

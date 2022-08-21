@@ -8,19 +8,25 @@ from functools import reduce
 
 class Segment(pg.sprite.Sprite):
 
-    def __init__(self, game, x, y):
+    def __init__(self, game, gx, gy):
         self.groups = game.all_sprites
         # self.groups = game.all_sprites
         pg.sprite.Sprite.__init__(self, self.groups)
         self.image = pg.Surface((TILESIZE, TILESIZE))
         self.image.fill(GREEN)
         self.rect = self.image.get_rect()
+        self.game = game
 
-        self.dx = 0
-        self.dy = 0
+        self.gx = gx
+        self.gy = gy
 
         # screen position
-        self.rect.x, self.rect.y = x, y
+        x, y = self.game.current_floor.get_local_pos(gx, gy)
+        self.rect.x, self.rect.y = x * TILESIZE, y * TILESIZE
+
+    def update(self):
+        x, y = self.game.current_floor.get_local_pos(self.gx, self.gy)
+        self.rect.x, self.rect.y = x * TILESIZE, y * TILESIZE
 
     def drawt(self, screen):
         screen.blit(self.image, (self.rect.x, self.rect.y))
@@ -33,7 +39,7 @@ class Player(pg.sprite.Sprite):
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
         self.image = pg.Surface((TILESIZE, TILESIZE))
-        self.image.fill(GREEN)
+        self.image.fill(BROWN)
         self.rect = self.image.get_rect()
 
         self.name = "Player"
@@ -86,16 +92,13 @@ class Player(pg.sprite.Sprite):
 
     def update_segments(self):
         if self.segments:
-            last = self
+            lastx = self.gx
+            lasty = self.gy
             for seg in self.segments:
-                snx = last.rect.x - last.dx * TILESIZE
-                sny = last.rect.y - last.dy * TILESIZE
-                if last.dx != 0 or last.dy != 0:  # prevents segments moving without the head? idk if i want that
-                    seg.rect.x = snx
-                    seg.rect.y = sny
-                    seg.dx = last.dx
-                    seg.dy = last.dy
-                last = seg
+                sx, sy = seg.gx, seg.gy
+                seg.gx, seg.gy = lastx, lasty
+                seg.update()
+                lastx, lasty = sx, sy
 
     def check_eat(self):
         # now check if we ate an apple
@@ -107,15 +110,15 @@ class Player(pg.sprite.Sprite):
                 break
 
     def add_segment(self):
-        if not self.segments:
-            # add the first segment
-            # first determine where we last were
-            lastx, lasty = self.rect.x - self.dx * TILESIZE, self.rect.y - self.dy * TILESIZE
-            self.segments.append(Segment(self.game, lastx, lasty))
+        # add the first segment
+        # first determine where we last were
+        # lastx, lasty = self.gx - self.dx, self.gy - self.dy
+        # self.segments.insert(0, Segment(self.game, self.gx, self.gy))
+        if self.segments:
+            last = self.segments[-1]
         else:
-            last_seg = self.segments[-1]
-            lastx, lasty = last_seg.rect.x - last_seg.dx * TILESIZE, last_seg.rect.y - last_seg.dy * TILESIZE
-            self.segments.append(Segment(self.game, lastx, lasty))
+            last = self
+        self.segments.append(Segment(self.game, last.gx, last.gy))
 
     def is_moving(self):
         return self.dx != 0 or self.dy != 0
@@ -129,44 +132,3 @@ class Player(pg.sprite.Sprite):
         # blocked if we hit something and collisions are on
         is_blocked = blocked and not self.game.godmode
         return is_blocked
-
-    def get_item(self, item):
-        if len(self.state.inventory) + 1 <= self.state.Strength.value:
-            self.state.inventory.append(item)
-            if not self.equipped_item:
-                self.equipped_item = item
-            return True
-        else:
-            return False
-    
-    def use_item(self):
-        if self.equipped_item:
-            self.equipped_item.use()
-            # if its consumable, remove it after use
-            if self.equipped_item.consumable:
-                self.state.inventory.remove(self.equipped_item)
-                # equip the next item if there is one, or empty hands
-                if len(self.state.inventory) > 0:
-                    self.equipped_item = self.state.inventory[0]
-                else:
-                    self.equipped_item = None
-
-    def heal_hp(self, amount_pcnt):
-        max_health = self.state.Constitution.value
-        cur_health = self.state.Health.value
-        gained = int(max_health * amount_pcnt)
-        if cur_health + gained <= max_health:
-            new_health = cur_health + gained
-        else:
-            new_health = max_health
-        new_health = int(new_health)
-        self.state.Health.value = new_health
-    
-    def get_stats(self):
-        return self.state.get_stats()
-    
-    def gain_xp(self, amount):
-        self.state.Experience.value += amount
-        if self.state.Experience.value >= self.state.next_level_xp():
-            self.state.level_up()
-            self.game.log.info("I leveled up!")
